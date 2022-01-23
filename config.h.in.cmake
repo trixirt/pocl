@@ -96,6 +96,8 @@
 
 #define CUDA_DEVICE_EXTENSIONS "@CUDA_DEVICE_EXTENSIONS@"
 
+#cmakedefine CUDA_IMAGE
+
 #endif
 
 #if defined(BUILD_BASIC) || defined(BUILD_PTHREAD)
