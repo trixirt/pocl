@@ -274,7 +274,11 @@ pocl_cuda_init (unsigned j, cl_device_id dev, const char *parameters)
   dev->constant_as_id = 1;
 
   /* TODO: Get images working */
+#ifdef CUDA_IMAGE
+  dev->image_support = CL_TRUE;
+#else
   dev->image_support = CL_FALSE;
+#endif
 
   dev->autolocals_to_args
       = POCL_AUTOLOCALS_TO_ARGS_ONLY_IF_DYNAMIC_LOCALS_PRESENT;
