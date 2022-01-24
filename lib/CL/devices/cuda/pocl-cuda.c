@@ -678,6 +678,143 @@ pocl_cuda_free (cl_device_id device, cl_mem mem_obj)
   p->version = 0;
 }
 
+static void
+pocl_cuda_submit_copy_image_rect(CUstream stream,
+				 cl_mem src_image,
+				 cl_mem dst_image,
+				 pocl_mem_identifier *src_mem_id,
+				 pocl_mem_identifier *dst_mem_id,
+				 const size_t *src_origin,
+				 const size_t *dst_origin,
+				 const size_t *region)
+{
+#ifndef CUDA_IMAGE
+  POCL_ABORT_UNIMPLEMENTED ("CL_COMMAND_COPY_IMAGE");
+#else
+  POCL_MSG_PRINT_MEMORY (
+      "CUDA COPY IMAGE RECT \n"
+      "dst_image %p dst_mem_id %p \n"
+      "src_image %p src_mem_id %p \n"
+      "dst_origin [0,1,2] %zu %zu %zu \n"
+      "src_origin [0,1,2] %zu %zu %zu \n"
+      "region [0,1,2] %zu %zu %zu \n",
+      dst_image, dst_mem_id,
+      src_image, src_mem_id,
+      dst_origin[0], dst_origin[1], dst_origin[2],
+      src_origin[0], src_origin[1], src_origin[2],
+      region[0], region[1], region[2]);
+#endif
+}
+
+static void
+pocl_cuda_submit_fill_image (CUstream stream, cl_mem image,
+			     pocl_mem_identifier *image_data, const size_t *origin,
+			     const size_t *region, cl_uint4 orig_pixel,
+			     pixel_t fill_pixel, size_t pixel_size)
+{
+#ifndef CUDA_IMAGE
+  POCL_ABORT_UNIMPLEMENTED ("CL_COMMAND_FILL_IMAGE");
+#else
+   POCL_MSG_PRINT_MEMORY ("CUDA / FILL IMAGE \n"
+                          "image %p data %p \n"
+                          "origin [0,1,2] %zu %zu %zu \n"
+                          "region [0,1,2] %zu %zu %zu \n"
+                          "pixel %p size %zu \n",
+                          image, image_data,
+                          origin[0], origin[1], origin[2],
+                          region[0], region[1], region[2],
+                          fill_pixel, pixel_size);
+#endif
+}
+
+static void
+pocl_cuda_submit_map_image (CUstream stream,
+			    pocl_mem_identifier *mem_id,
+			    cl_mem src_image,
+			    mem_mapping_t *map)
+{
+#ifndef CUDA_IMAGE
+  POCL_ABORT_UNIMPLEMENTED ("CL_COMMAND_MAP_IMAGE");
+#else
+  POCL_MSG_PRINT_MEMORY (
+      "CUDA MAP IMAGE  \n"
+      "mem_id %p \n"
+      "src_image %p \n"
+      "map %p \n",
+      mem_id, src_image, map);
+#endif
+}
+
+static void
+pocl_cuda_submit_read_image_rect(CUstream stream,
+				 cl_mem src_image,
+				 pocl_mem_identifier *src_mem_id,
+				 void *__restrict__ dst_host_ptr,
+				 pocl_mem_identifier *dst_mem_id,
+				 const size_t *origin,
+				 const size_t *region,
+				 size_t dst_row_pitch,
+				 size_t dst_slice_pitch,
+				 size_t dst_offset)
+{
+#ifndef CUDA_IMAGE
+  POCL_ABORT_UNIMPLEMENTED ("CL_COMMAND_READ_IMAGE");
+#else
+  POCL_MSG_PRINT_MEMORY (
+      "CUDA READ IMAGE RECT \n"
+      "src_image %p src_mem_id %p \n"
+      "dst_hostptr %p dst_mem_id %p \n"
+      "origin [0,1,2] %zu %zu %zu \n"
+      "region [0,1,2] %zu %zu %zu \n"
+      "row %zu slice %zu offset %zu \n",
+      src_image, src_mem_id,
+      dst_host_ptr, dst_mem_id,
+      origin[0], origin[1], origin[2],
+      region[0], region[1], region[2],
+      dst_row_pitch, dst_slice_pitch, dst_offset);
+#endif
+}
+
+static void
+pocl_cuda_submit_unmap_image(CUstream stream,
+			     pocl_mem_identifier *mem_id,
+			     cl_mem dst_image,
+			     mem_mapping_t *map)
+{
+#ifdef CUDA_IMAGE
+#endif
+}
+
+static void
+pocl_cuda_submit_write_image_rect (CUstream stram,
+				   cl_mem dst_image,
+				   pocl_mem_identifier *dst_mem_id,
+				   const void *__restrict__ src_host_ptr,
+				   pocl_mem_identifier *src_mem_id,
+				   const size_t *origin,
+				   const size_t *region,
+				   size_t src_row_pitch,
+				   size_t src_slice_pitch,
+				   size_t src_offset)
+{
+#ifndef CUDA_IMAGE
+  POCL_ABORT_UNIMPLEMENTED ("CL_COMMAND_WIRTE_IMAGE");
+#else
+  POCL_MSG_PRINT_MEMORY (
+      "CUDA WRITE IMAGE RECT \n"
+      "dst_image %p dst_mem_id %p \n"
+      "src_hostptr %p src_mem_id %p \n"
+      "origin [0,1,2] %zu %zu %zu \n"
+      "region [0,1,2] %zu %zu %zu \n"
+      "row %zu slice %zu offset %zu \n",
+      dst_image, dst_mem_id,
+      src_host_ptr, src_mem_id,
+      origin[0], origin[1], origin[2],
+      region[0], region[1], region[2],
+      src_row_pitch, src_slice_pitch, src_offset);
+#endif
+}
+
 void
 pocl_cuda_submit_read (CUstream stream, void *host_ptr, const void *device_ptr,
                        size_t offset, size_t cb)
@@ -1389,13 +1526,62 @@ pocl_cuda_submit_node (_cl_command_node *node, cl_command_queue cq, int locked)
                                 cmd->memfill.pattern,
                                 cmd->memfill.pattern_size);
       break;
+
     case CL_COMMAND_READ_IMAGE:
+      pocl_cuda_submit_read_image_rect (stream,
+					cmd->read_image.src, cmd->read_image.src_mem_id,
+					cmd->read_image.dst_host_ptr, NULL, cmd->read_image.origin,
+					cmd->read_image.region, cmd->read_image.dst_row_pitch,
+					cmd->read_image.dst_slice_pitch, cmd->read_image.dst_offset);
+      break;
+
     case CL_COMMAND_WRITE_IMAGE:
+      pocl_cuda_submit_write_image_rect (stream,
+					 cmd->write_image.dst, cmd->write_image.dst_mem_id,
+					 cmd->write_image.src_host_ptr, NULL, cmd->write_image.origin,
+					 cmd->write_image.region, cmd->write_image.src_row_pitch,
+					 cmd->write_image.src_slice_pitch, cmd->write_image.src_offset);
+      break;
+
     case CL_COMMAND_COPY_IMAGE:
+      pocl_cuda_submit_copy_image_rect (stream,
+					cmd->copy_image.src, cmd->copy_image.dst,
+					cmd->copy_image.src_mem_id, cmd->copy_image.dst_mem_id,
+					cmd->copy_image.src_origin, cmd->copy_image.dst_origin,
+					cmd->copy_image.region);
+      break;
+
     case CL_COMMAND_COPY_BUFFER_TO_IMAGE:
+      pocl_cuda_submit_write_image_rect (stream,
+					 cmd->write_image.dst, cmd->write_image.dst_mem_id, NULL,
+					 cmd->write_image.src_mem_id, cmd->write_image.origin,
+					 cmd->write_image.region, cmd->write_image.src_row_pitch,
+					 cmd->write_image.src_slice_pitch, cmd->write_image.src_offset);
+      break;
+
     case CL_COMMAND_COPY_IMAGE_TO_BUFFER:
+      pocl_cuda_submit_read_image_rect (stream,
+					cmd->read_image.src, cmd->read_image.src_mem_id, NULL,
+					cmd->read_image.dst_mem_id, cmd->read_image.origin,
+					cmd->read_image.region, cmd->read_image.dst_row_pitch,
+					cmd->read_image.dst_slice_pitch, cmd->read_image.dst_offset);
+      break;
+
     case CL_COMMAND_FILL_IMAGE:
+      pocl_cuda_submit_fill_image (stream, event->mem_objs[0],
+				   cmd->fill_image.mem_id, cmd->fill_image.origin,
+				   cmd->fill_image.region, cmd->fill_image.orig_pixel,
+				   cmd->fill_image.fill_pixel,
+				   cmd->fill_image.pixel_size);
+      break;
+
     case CL_COMMAND_MAP_IMAGE:
+      pocl_cuda_submit_map_image (stream,
+				  cmd->map.mem_id,
+				  event->mem_objs[0],
+				  cmd->map.mapping);
+      break;
+
     case CL_COMMAND_NATIVE_KERNEL:
     case CL_COMMAND_SVM_FREE:
     case CL_COMMAND_SVM_MAP:
