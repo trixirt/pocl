@@ -1315,7 +1315,7 @@ LLVMValueRef Workgroup::createArgBufferLoad(LLVMBuilderRef Builder,
     LLVMTypeRef DestTy = LLVMPointerType(ParamType, DeviceArgsASid);
     LLVMValueRef ArgOffsetBitcast =
         LLVMBuildPointerCast(Builder, ArgByteOffset, DestTy, "arg_ptr");
-#ifndef LLVM_OPAQUE_POINTERS
+#ifdef LLVM_OLDER_THAN_14_0
     return LLVMBuildLoad(Builder, ArgOffsetBitcast, "");
 #else
     LLVMTypeRef LoadTy = LLVMGetElementType(DestTy);
@@ -1377,7 +1377,7 @@ Workgroup::createArgBufferWorkgroupLauncher(Function *Func,
     LLVMAddFunction(M, FunctionName, LauncherFuncType);
 
   LLVMBasicBlockRef Block =
-      LLVMAppendBasicBlockInContext(LLVMContext, WrapperKernel, "entry");
+    LLVMAppendBasicBlockInContext(LLVMContext, WrapperKernel, "entry");
   LLVMValueRef ArgBuffer = LLVMGetParam(WrapperKernel, 0);
 #ifdef LLVM_OPAQUE_POINTERS
   LLVMTypeRef ArgBufferTy = LLVMTypeOf(ArgBuffer);
@@ -1430,7 +1430,7 @@ Workgroup::createArgBufferWorkgroupLauncher(Function *Func,
 
         uint64_t ArgPos = ArgBufferOffsets[i];
         LLVMValueRef Offs = LLVMConstInt(Int32Type, ArgPos, 0);
-#if LLVM_OLDER_THAN_14_0
+#ifndef LLVM_OPAQUE_POINTERS
         LLVMValueRef SizeByteOffset =
             LLVMBuildGEP(Builder, ArgBuffer, &Offs, 1, "size_byte_offset");
 #else
@@ -1443,7 +1443,7 @@ Workgroup::createArgBufferWorkgroupLauncher(Function *Func,
 
         // The buffer size passed from the runtime is a byte size, we
         // need to convert it to an element count for the alloca.
-#ifndef LLVM_OPAQUE_POINTERS
+#ifdef LLVM_OLDER_THAN_14_0
         LLVMValueRef LocalArgByteSize =
             LLVMBuildLoad(Builder, SizeOffsetBitcast, "byte_size");
 #else
@@ -1474,7 +1474,7 @@ Workgroup::createArgBufferWorkgroupLauncher(Function *Func,
       }
       Args[i] = LocalArgAlloca;
     } else {
-#if LLVM_OLDER_THAN_14_0
+#ifndef LLVM_OPAQUE_POINTERS
       Args[i] = createArgBufferLoad(Builder, ArgBuffer, ArgBufferOffsets, F, i);
 #else
       Args[i] = createArgBufferLoad(Builder, ArgBufferTy, ArgBuffer, ArgBufferOffsets, F, i);
@@ -1581,14 +1581,14 @@ Workgroup::createGridLauncher(Function *KernFunc, Function *WGFunc,
 
   // Load the pointer to the pocl context (in global memory),
   // assuming it is stored as the 4th last argument in the kernel.
-#ifdef LLVM_OLDER_THAN_14_0
+#ifndef LLVM_OPAQUE_POINTERS
   LLVMValueRef PoclCtx =
     createArgBufferLoad(Builder, ArgBuffer, KernArgBufferOffsets, Kernel,
                         KernArgCount - HiddenArgs);
 #else
-    LLVMValueRef PoclCtx =
-      createArgBufferLoad(Builder, ArgBufferTy, ArgBuffer, KernArgBufferOffsets, Kernel,
-                          KernArgCount - HiddenArgs);
+  LLVMValueRef PoclCtx =
+    createArgBufferLoad(Builder, ArgBufferTy, ArgBuffer, KernArgBufferOffsets, Kernel,
+                        KernArgCount - HiddenArgs);
 #endif
 
   LLVMValueRef Args[4] = {
