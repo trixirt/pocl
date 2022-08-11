@@ -80,17 +80,17 @@ find_from_list(llvm::StringRef             needle,
  * Note this does not change the types in Function->FunctionType
  * so it's only used inside CopyFunc on kernel library functions */
 static void fixOpenCLimageArguments(llvm::Function *Func, unsigned AS) {
-    Function::arg_iterator b = Func->arg_begin();
-    Function::arg_iterator e = Func->arg_end();
-    for (; b != e; b++)  {
-        Argument *j = &*b;
-        Type *t = j->getType();
-        if (t->isPointerTy() && t->getPointerElementType()->isStructTy()) {
-            Type *pe_type = t->getPointerElementType();
-            if (pe_type->getStructName().startswith("opencl.image"))  {
-              Type *new_t =
-                PointerType::get(pe_type, AS);
-              j->mutateType(new_t);
+    for (unsigned i = 0; i < Func->arg_size(); i++) {
+        Argument *Arg = Func->getArg(i);
+        Type *Ty = Arg->getType();
+        if (Ty->isPointerTy()) {
+            Type *ElTy = Func->getParamByValType(i);
+            if (ElTy && ElTy->isStructTy()) {
+                llvm::StringRef name = ElTy->getStructName();
+                if (name.startswith("opencl.image")) {
+                    Type *NewTy = PointerType::get(ElTy, AS);
+                    Arg->mutateType(NewTy);
+                }
             }
         }
     }
@@ -219,11 +219,15 @@ CopyFunc(const llvm::StringRef Name,
     llvm::Function *DstFunc = To->getFunction(Name);
 
     if (DstFunc == NULL) {
+#ifndef LLVM_OPAQUE_POINTERS
+      Type *ValTy = SrcFunc->getType()->getElementType();
+#else
+      Type *ValTy = SrcFunc->getValueType();
+#endif
         DB_PRINT("   %s not found in destination module, creating\n",
                  Name.data());
         DstFunc =
-          Function::Create(cast<FunctionType>(
-                             SrcFunc->getType()->getElementType()),
+          Function::Create(cast<FunctionType>(ValTy),
                            SrcFunc->getLinkage(),
                            SrcFunc->getName(),
                            To);
@@ -476,8 +480,13 @@ int link(llvm::Module *Program, const llvm::Module *Lib, std::string &log,
   llvm::Module::const_global_iterator gi,ge;
   for (gi = Lib->global_begin(), ge = Lib->global_end(); gi != ge; gi++) {
     DB_PRINT(" %s\n", gi->getName().data());
+#ifndef LLVM_OPAQUE_POINTERS
+    Type *ValTy = gi->getType()->getElementType();
+#else
+    Type *ValTy = gi->getValueType();
+#endif
     GlobalVariable *GV = new GlobalVariable(
-      *Program, gi->getType()->getElementType(), gi->isConstant(),
+      *Program, ValTy, gi->isConstant(),
       gi->getLinkage(), (Constant*)0, gi->getName(), (GlobalVariable*)0,
       gi->getThreadLocalMode(), gi->getType()->getAddressSpace());
     GV->copyAttributesFrom(&*gi);
@@ -535,8 +544,13 @@ int copyKernelFromBitcode(const char* name, llvm::Module *parallel_bc,
   llvm::Module::const_global_iterator gi,ge;
   for (gi=program->global_begin(), ge=program->global_end(); gi != ge; gi++) {
     DB_PRINT(" %s\n", gi->getName().data());
+#ifndef LLVM_OPAQUE_POINTERS
+    Type *ValTy = gi->getType()->getElementType();
+#else
+    Type *ValTy = gi->getValueType();
+#endif
     GlobalVariable *GV = new GlobalVariable(
-      *parallel_bc, gi->getType()->getElementType(), gi->isConstant(),
+      *parallel_bc, ValTy, gi->isConstant(),
       gi->getLinkage(), (Constant*)0, gi->getName(), (GlobalVariable*)0,
       gi->getThreadLocalMode(), gi->getType()->getAddressSpace());
     GV->copyAttributesFrom(&*gi);
