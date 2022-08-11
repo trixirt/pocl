@@ -86,6 +86,9 @@ namespace pocl {
                                              LLVMValueRef ArgByteOffset);
 
     LLVMValueRef createArgBufferLoad(LLVMBuilderRef Builder,
+#ifdef LLVM_OPAQUE_POINTERS
+                                     LLVMTypeRef ArgBufferTy,
+#endif
                                      LLVMValueRef ArgBufferPtr,
                                      uint64_t *ArgBufferOffsets, LLVMValueRef F,
                                      unsigned ParamIndex);

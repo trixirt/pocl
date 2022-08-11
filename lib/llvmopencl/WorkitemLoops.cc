@@ -957,8 +957,12 @@ WorkitemLoops::GetContextArray(llvm::Instruction *instruction,
          Otherwise we would rely on a dynamic alloca to allocate 
          unique stack space to all the work-items when its wiloop
          iteration is executed. */
+#ifndef LLVM_OPAQUE_POINTERS
       elementType = 
         dyn_cast<AllocaInst>(instruction)->getType()->getElementType();
+#else
+      elementType = dyn_cast<AllocaInst>(instruction)->getAllocatedType();
+#endif
     } 
   else 
     {
@@ -973,7 +977,11 @@ WorkitemLoops::GetContextArray(llvm::Instruction *instruction,
   Type *AllocType = elementType;
   AllocaInst *InstCast = dyn_cast<AllocaInst>(instruction);
   if (InstCast) {
+#ifndef LLVM_OPAQUE_POINTERS
     unsigned Alignment = InstCast->getAlignment();
+#else
+    unsigned Alignment = InstCast->getAlign().value();
+#endif
 
     uint64_t StoreSize =
         Layout.getTypeStoreSize(InstCast->getAllocatedType());
@@ -1090,7 +1098,12 @@ WorkitemLoops::GetContextArray(llvm::Instruction *instruction,
 #endif
       // if (size == 0) WGLocalSizeX * WGLocalSizeY * WGLocalSizeZ * 8 *
       // Alloca->getAllocatedType()->getScalarSizeInBits();
-      size_t alignBits = Alloca->getAlignment() * 8;
+#ifndef LLVM_OPAQUE_POINTERS
+      size_t alignBits = Alloca->getAlignment();
+#else
+      size_t alignBits = Alloca->getAlign().value();
+#endif
+      alignBits *= 8;
 
       Metadata *VariableDebugMeta =
           cast<MetadataAsValue>(DebugCall->getOperand(1))->getMetadata();
