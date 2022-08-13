@@ -456,20 +456,20 @@ int pocl_llvm_build_program(cl_program program,
 
   LangOptions *la = pocl_build.getLangOpts();
   PreprocessorOptions &po = pocl_build.getPreprocessorOpts();
+#ifdef LLVM_OLDER_THAN_10_0
+  pocl_build.setLangDefaults(*la, clang::InputKind::OpenCL, triple,
+                             po, clang::LangStandard::lang_opencl12);  
+#elif LLVM_OLDER_THAN_12_0
+  pocl_build.setLangDefaults(*la, clang::InputKind(clang::Language::OpenCL), triple,
+                             po, clang::LangStandard::lang_opencl12);  
+#elif LLVM_OLDER_THAN_15_0
+  pocl_build.setLangDefaults(*la, clang::InputKind(clang::Language::OpenCL), triple,
+                             po.Includes, clang::LangStandard::lang_opencl12);
 
-  pocl_build.setLangDefaults(*la,
-#ifndef LLVM_OLDER_THAN_10_0
-                             clang::InputKind(clang::Language::OpenCL),
 #else
-                             clang::InputKind::OpenCL,
+  LangOptions::setLangDefaults(*la, clang::Language::OpenCL, triple,
+                               po.Includes, clang::LangStandard::lang_opencl12);
 #endif
-                             triple,
-#ifndef LLVM_OLDER_THAN_12_0
-                             po.Includes,
-#else
-                             po,
-#endif
-                             clang::LangStandard::lang_opencl12);
 
   // LLVM 3.3 and older do not set that char is signed which is
   // defined by the OpenCL C specs (but not by C specs).
