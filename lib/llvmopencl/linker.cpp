@@ -89,12 +89,9 @@ static void fixOpenCLimageArguments(llvm::Function *Func, unsigned AS) {
 #else
             Type *ValTy = Func->getParamByValType(i);
 #endif
-            if (ValTy && ValTy->isStructTy()) {
-                llvm::StringRef name = ValTy->getStructName();
-                if (name.startswith("opencl.image")) {
-                    Type *NewTy = PointerType::get(ValTy, AS);
-                    Arg->mutateType(NewTy);
-                }
+            if (pocl::is_ocl_image_type(ValTy)) {
+                Type *NewTy = PointerType::get(ValTy, AS);
+                Arg->mutateType(NewTy);
             }
         }
     }

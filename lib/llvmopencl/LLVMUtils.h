@@ -76,10 +76,21 @@ isAutomaticLocal(const std::string &FuncName, llvm::GlobalVariable &Var) {
 }
 
 inline bool
-is_image_type(const llvm::Type& t) 
+is_ocl_image_type(const llvm::Type *ValTy)
 {
-  if (t.isPointerTy() && t.getPointerElementType()->isStructTy()) {
-    llvm::StringRef name = t.getPointerElementType()->getStructName();
+  if (ValTy && ValTy->isStructTy()) {
+    llvm::StringRef name = ValTy->getStructName();
+    if (name.startswith("opencl.image"))
+      return true;
+  }
+  return false;
+}
+
+inline bool
+is_image_type(const llvm::Type *ValTy)
+{
+  if (ValTy && ValTy->isStructTy()) {
+    llvm::StringRef name = ValTy->getStructName();
     if (name.startswith("opencl.image2d_") || name.startswith("opencl.image3d_") ||
         name.startswith("opencl.image1d_") || name.startswith("struct._pocl_image"))
       return true;
@@ -88,13 +99,13 @@ is_image_type(const llvm::Type& t)
 }
 
 inline bool
-is_sampler_type(const llvm::Type& t)
+is_sampler_type(const llvm::Type *ValTy)
 {
-  if (t.isPointerTy() && t.getPointerElementType()->isStructTy())
-    {
-      llvm::StringRef name = t.getPointerElementType()->getStructName();
-      if (name.startswith("opencl.sampler_t")) return true;
-    }
+  if (ValTy && ValTy->isStructTy()) {
+    llvm::StringRef name = ValTy->getStructName();
+    if (name.startswith("opencl.sampler_t"))
+      return true;
+  }
   return false;
 }
 

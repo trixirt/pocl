@@ -545,7 +545,7 @@ int pocl_llvm_get_kernels_metadata(cl_program program, unsigned device_i) {
           printf("### automatic local %d size %u\n", i, auto_local_size);
       #endif
     }
-
+#if 0
     i = 0;
     for (llvm::Function::const_arg_iterator ii = KernelFunction->arg_begin(),
                                             ee = KernelFunction->arg_end();
@@ -566,7 +566,31 @@ int pocl_llvm_get_kernels_metadata(cl_program program, unsigned device_i) {
       }
       i++;
     }
-
+#else
+    for (i = 0; i < KernelFunction->arg_size(); i++) {
+      struct pocl_argument_info &ArgInfo = meta->arg_info[i];
+      Argument *Arg = KernelFunction->getArg(i);
+      Type *Ty = Arg->getType();
+      ArgInfo.type = POCL_ARG_TYPE_NONE;
+      if (Ty->isPointerTy()) {
+#ifndef LLVM_OPAQUE_POINTERS
+        Type *ValTy = Ty->getPointerElementType();
+#else
+        Type *ValTy = KernelFunction->getParamByValType(i);
+#endif
+        if (!Arg->hasByValAttr()) {
+          ArgInfo.type = POCL_ARG_TYPE_POINTER;
+          // index 0 is for function attributes, parameters start at 1.
+          // TODO: detect the address space from MD.
+        }
+        if (pocl::is_image_type(ValTy)) {
+          ArgInfo.type = POCL_ARG_TYPE_IMAGE;
+        } else if (pocl::is_sampler_type(ValTy)) {
+          ArgInfo.type = POCL_ARG_TYPE_SAMPLER;
+        }
+      }
+    }
+#endif    
     std::stringstream attrstr;
     std::string vectypehint;
     std::string wgsizehint;
