@@ -143,6 +143,7 @@ class Kernel;
     llvm::Instruction* LocalIDYLoadInstr;
     llvm::Instruction* LocalIDZLoadInstr;
 
+    llvm::Instruction* LocalIDLoad(llvm::Instruction **Inst, const char *str);
     bool Verify();
     /// The indices of entry and exit, not pointers, for finding the BBs in the
     /// replicated PRs too.

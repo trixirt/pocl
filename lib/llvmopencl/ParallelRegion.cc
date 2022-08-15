@@ -613,6 +613,21 @@ ParallelRegion::HasBlock(llvm::BasicBlock *bb)
     return find(begin(), end(), bb) != end();
 }
 
+llvm::Instruction*
+ParallelRegion::LocalIDLoad(llvm::Instruction **Inst, const char *str)
+{
+    if (*Inst == nullptr) {
+        IRBuilder<> builder(&*(entryBB()->getFirstInsertionPt()));
+        Value *Ptr = entryBB()->getParent()->getParent()->getGlobalVariable(str);
+#ifndef LLVM_OLDER_THAN_13_0
+        Type *ValTy = Ptr->getType()->getPointerElementType();
+        *Inst = builder.CreateLoad(ValTy, Ptr);
+#else
+        *Inst = builder.CreateLoad(Ptr);
+#endif
+    }
+    return *Inst;
+}
 /**
  * Find the instruction that loads the Z dimension of the work item
  * in the beginning of the parallel region, if not found, creates it.
@@ -620,6 +635,7 @@ ParallelRegion::HasBlock(llvm::BasicBlock *bb)
 llvm::Instruction*
 ParallelRegion::LocalIDZLoad()
 {
+#if 0
   if (LocalIDZLoadInstr != NULL) return LocalIDZLoadInstr;
   IRBuilder<> builder(&*(entryBB()->getFirstInsertionPt()));
   Value *Ptr = entryBB()->getParent()->getParent()->getGlobalVariable(POCL_LOCAL_ID_Z_GLOBAL);
@@ -628,6 +644,9 @@ ParallelRegion::LocalIDZLoad()
     Ptr->getType()->getPointerElementType(),
 #endif
     Ptr);
+#else
+  return LocalIDLoad(&LocalIDZLoadInstr, POCL_LOCAL_ID_Z_GLOBAL);
+#endif
 }
 
 /**
@@ -637,6 +656,7 @@ ParallelRegion::LocalIDZLoad()
 llvm::Instruction*
 ParallelRegion::LocalIDYLoad()
 {
+#if 0
   if (LocalIDYLoadInstr != NULL) return LocalIDYLoadInstr;
   IRBuilder<> builder(&*(entryBB()->getFirstInsertionPt()));
   Value *Ptr = entryBB()->getParent()->getParent()->getGlobalVariable(POCL_LOCAL_ID_Y_GLOBAL);
@@ -645,6 +665,9 @@ ParallelRegion::LocalIDYLoad()
     Ptr->getType()->getPointerElementType(),
 #endif
     Ptr);
+#else
+  return LocalIDLoad(&LocalIDYLoadInstr, POCL_LOCAL_ID_Y_GLOBAL);
+#endif
 }
 
 /**
@@ -654,6 +677,7 @@ ParallelRegion::LocalIDYLoad()
 llvm::Instruction*
 ParallelRegion::LocalIDXLoad()
 {
+#if 0
   if (LocalIDXLoadInstr != NULL) return LocalIDXLoadInstr;
   IRBuilder<> builder(&*(entryBB()->getFirstInsertionPt()));
   Value *Ptr = entryBB()->getParent()->getParent()->getGlobalVariable(POCL_LOCAL_ID_X_GLOBAL);
@@ -662,6 +686,9 @@ ParallelRegion::LocalIDXLoad()
     Ptr->getType()->getPointerElementType(),
 #endif
     Ptr);
+#else
+  return LocalIDLoad(&LocalIDXLoadInstr, POCL_LOCAL_ID_X_GLOBAL);
+#endif
 }
 
 void
