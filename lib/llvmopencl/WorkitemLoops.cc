@@ -757,7 +757,7 @@ WorkitemLoops::GetLinearWiIndex(llvm::IRBuilder<> &builder, llvm::Module *M,
 
 llvm::Instruction *
 WorkitemLoops::AddContextSave
-(llvm::Instruction *instruction, llvm::Instruction *alloca)
+(llvm::Instruction *instruction, llvm::AllocaInst *alloca)
 {
 
   if (isa<AllocaInst>(instruction))
@@ -796,13 +796,17 @@ WorkitemLoops::AddContextSave
       gepArgs.push_back(region->LocalIDXLoad());
     }
 
+#ifdef LLVM_OPAQUE_POINTERS
+  Type *AllocaTy = alloca->getAllocatedType();
+#else
+  Type *AllocaTy = alloca->getType()->getPointerElementType();
+#endif
   return builder.CreateStore(instruction,
-             builder.CreateGEP(alloca->getType()->getPointerElementType(),
-                               alloca, gepArgs));
+                             builder.CreateGEP(AllocaTy, alloca, gepArgs));
 }
 
 llvm::Instruction *WorkitemLoops::AddContextRestore(llvm::Value *val,
-                                                    llvm::Instruction *alloca,
+                                                    llvm::AllocaInst *alloca,
                                                     llvm::Type *InstType,
                                                     bool PoclWrapperStructAdded,
                                                     llvm::Instruction *before,
@@ -849,10 +853,13 @@ llvm::Instruction *WorkitemLoops::AddContextRestore(llvm::Value *val,
       gepArgs.push_back(
           ConstantInt::get(Type::getInt32Ty(alloca->getContext()), 0));
 
+#ifdef LLVM_OPAQUE_POINTERS
+    Type *AllocaTy = alloca->getAllocatedType();
+#else
+    Type *AllocaTy = alloca->getType()->getPointerElementType();
+#endif
     llvm::Instruction *gep =
-        dyn_cast<Instruction>(builder.CreateGEP(
-            alloca->getType()->getPointerElementType(),
-            alloca, gepArgs));
+        dyn_cast<Instruction>(builder.CreateGEP(AllocaTy, alloca, gepArgs));
     if (isAlloca) {
       /* In case the context saved instruction was an alloca, we created a
          context array with pointed-to elements, and now want to return a
@@ -866,7 +873,7 @@ llvm::Instruction *WorkitemLoops::AddContextRestore(llvm::Value *val,
  * Returns the context array (alloca) for the given Value, creates it if not
  * found.
  */
-llvm::Instruction *
+llvm::AllocaInst *
 WorkitemLoops::GetContextArray(llvm::Instruction *instruction,
                                bool &PoclWrapperStructAdded) {
   PoclWrapperStructAdded = false;
@@ -1172,8 +1179,7 @@ WorkitemLoops::AddContextSaveRestore
 
   /* Allocate the context data array for the variable. */
   bool PoclWrapperStructAdded = false;
-  llvm::Instruction *alloca =
-      GetContextArray(instruction, PoclWrapperStructAdded);
+  auto *alloca = GetContextArray(instruction, PoclWrapperStructAdded);
   llvm::Instruction *theStore = AddContextSave(instruction, alloca);
 
   InstructionVec uses;

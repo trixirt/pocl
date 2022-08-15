@@ -59,7 +59,7 @@ namespace pocl {
     typedef std::vector<llvm::BasicBlock *> BasicBlockVector;
     typedef std::set<llvm::Instruction* > InstructionIndex;
     typedef std::vector<llvm::Instruction* > InstructionVec;
-    typedef std::map<std::string, llvm::Instruction*> StrInstructionMap;
+    typedef std::map<std::string, llvm::AllocaInst*> StrAllocaInstMap;
 
     llvm::DominatorTree *DT;
     llvm::LoopInfoWrapperPass *LI;
@@ -70,7 +70,7 @@ namespace pocl {
 
     ParallelRegion::ParallelRegionVector *original_parallel_regions;
 
-    StrInstructionMap contextArrays;
+    StrAllocaInstMap contextArrays;
 
     virtual bool ProcessFunction(llvm::Function &F);
 
@@ -81,15 +81,15 @@ namespace pocl {
     llvm::Value *GetLinearWiIndex(llvm::IRBuilder<> &builder, llvm::Module *M,
                                   ParallelRegion *region);
     llvm::Instruction *AddContextSave(llvm::Instruction *instruction,
-                                      llvm::Instruction *alloca);
+                                      llvm::AllocaInst *alloca);
     llvm::Instruction *AddContextRestore(llvm::Value *val,
-                                         llvm::Instruction *alloca,
+                                         llvm::AllocaInst *alloca,
                                          llvm::Type *InstType,
                                          bool PoclWrapperStructAdded,
                                          llvm::Instruction *before = NULL,
                                          bool isAlloca = false);
-    llvm::Instruction *GetContextArray(llvm::Instruction *val,
-                                       bool &PoclWrapperStructAdded);
+    llvm::AllocaInst *GetContextArray(llvm::Instruction *val,
+                                      bool &PoclWrapperStructAdded);
 
     std::pair<llvm::BasicBlock *, llvm::BasicBlock *>
     CreateLoopAround
