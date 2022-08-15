@@ -1665,9 +1665,18 @@ Workgroup::createFastWorkgroupLauncher(llvm::Function *F) {
     Type *T = ii->getType();
     Type* I32Ty = Type::getInt32Ty(M->getContext());
     Value *AI = &*ai;
-    Value *GEP = builder.CreateGEP(AI->getType()->getPointerElementType(),
-        AI, ConstantInt::get(I32Ty, i));
-    Value *Pointer = builder.CreateLoad(GEP->getType()->getPointerElementType(), GEP);
+#ifdef LLVM_OPAQUE_POINTERS
+    Type *ValTy = F->getParamByValType(i);
+#else
+    Type *ValTy = AI->getType()->getPointerElementType();
+#endif
+    Value *GEP = builder.CreateGEP(ValTy, AI, ConstantInt::get(I32Ty, i));
+#ifdef LLVM_OPAQUE_POINTERS
+    Type *GEPTy = dyn_cast<GetElementPtrInst>(GEP)->getSourceElementType();
+#else
+    Type *GEPTy = GEP->getType()->getPointerElementType();
+#endif
+    Value *Pointer = builder.CreateLoad(GEPTy, GEP);
     Value *V;
 
     if (T->isPointerTy()) {
@@ -1679,7 +1688,11 @@ Workgroup::createFastWorkgroupLauncher(llvm::Function *F) {
       } else {
         // It's a pass by value pointer argument, use the underlying
         // element type in subsequent load.
+#ifdef LLVM_OPAQUE_POINTERS
+        T = ValTy;
+#else
         T = T->getPointerElementType();
+#endif
       }
     }
 
