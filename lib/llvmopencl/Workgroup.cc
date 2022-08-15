@@ -406,8 +406,12 @@ Workgroup::createLoadFromContext(
   IRBuilder<> &Builder, int StructFieldIndex, int FieldIndex=-1) {
 
   Value *GEP, *Ptr;
+#if 0
   Type *ContextType = ContextArg->getType()->getPointerElementType();
   GEP = Builder.CreateStructGEP(ContextType, ContextArg, StructFieldIndex);
+#else
+  GEP = Builder.CreateStructGEP(PoclContextT, ContextArg, StructFieldIndex);
+#endif
   Type *GEPType = GEP->getType()->getPointerElementType();
 
   llvm::LoadInst *Load = nullptr;
