@@ -110,6 +110,7 @@ CloneFuncFixOpenCLImageT(llvm::Module *Mod, llvm::Function *F, unsigned AS)
     int changed = 0;
     ValueToValueMapTy VVMap;
     SmallVector<Type *, 8> sv;
+#if 0
     for (Function::arg_iterator i = F->arg_begin(), e = F->arg_end();
           i != e; ++i) {
         Argument *j = &*i;
@@ -127,7 +128,27 @@ CloneFuncFixOpenCLImageT(llvm::Module *Mod, llvm::Function *F, unsigned AS)
         }
         sv.push_back(new_t);
     }
-
+#else
+    for (unsigned i = 0; i < F->arg_size(); i++) {
+        Argument *Arg = F->getArg(i);
+        Type *Ty = Arg->getType();
+        Type *NewTy = Ty;
+        if (Ty->isPointerTy()) {
+#ifndef LLVM_OPAQUE_POINTERS
+            Type *ValTy = Ty->getPointerElementType();
+#else
+            Type *ValTy = F->getParamByValType(i);
+#endif
+            if (pocl::is_ocl_image_type(ValTy)) {
+                if (Ty->getPointerAddressSpace() != AS) {
+                    NewTy = PointerType::get(ValTy, AS);
+                    changed = 1;
+                }
+            }
+        }
+        sv.push_back(NewTy);
+    }
+#endif
     if (!changed)
       return F;
 
