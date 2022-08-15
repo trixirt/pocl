@@ -409,10 +409,11 @@ Workgroup::createLoadFromContext(
 #if 0
   Type *ContextType = ContextArg->getType()->getPointerElementType();
   GEP = Builder.CreateStructGEP(ContextType, ContextArg, StructFieldIndex);
+  Type *GEPType = GEP->getType()->getPointerElementType();
 #else
   GEP = Builder.CreateStructGEP(PoclContextT, ContextArg, StructFieldIndex);
+  Type *GEPType = PoclContextT->getTypeAtIndex(StructFieldIndex);
 #endif
-  Type *GEPType = GEP->getType()->getPointerElementType();
 
   llvm::LoadInst *Load = nullptr;
   if (SizeTWidth == 64) {
