@@ -618,9 +618,13 @@ ParallelRegion::LocalIDLoad(llvm::Instruction **Inst, const char *str)
 {
     if (*Inst == nullptr) {
         IRBuilder<> builder(&*(entryBB()->getFirstInsertionPt()));
-        Value *Ptr = entryBB()->getParent()->getParent()->getGlobalVariable(str);
+        GlobalValue *Ptr = entryBB()->getParent()->getParent()->getGlobalVariable(str);
 #ifndef LLVM_OLDER_THAN_13_0
+#ifdef LLVM_OPAQUE_POINTERS
+        Type *ValTy = Ptr->getValueType();
+#else
         Type *ValTy = Ptr->getType()->getPointerElementType();
+#endif
         *Inst = builder.CreateLoad(ValTy, Ptr);
 #else
         *Inst = builder.CreateLoad(Ptr);
