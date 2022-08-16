@@ -547,6 +547,22 @@ int pocl_llvm_get_kernels_metadata(cl_program program, unsigned device_i) {
     }
 
     i = 0;
+#if 1
+    for_function_args (KernelFunction) {
+      struct pocl_argument_info &ArgInfo = meta->arg_info[Arg.Index];
+      ArgInfo.type = POCL_ARG_TYPE_NONE;
+      if (Arg.Ty->isPointerTy() && !Arg.Itr->hasByValAttr()) {
+        ArgInfo.type = POCL_ARG_TYPE_POINTER;
+        // index 0 is for function attributes, parameters start at 1.
+        // TODO: detect the address space from MD.
+      }
+      if (pocl::is_image_type(*Arg.Ty)) {
+        ArgInfo.type = POCL_ARG_TYPE_IMAGE;
+      } else if (pocl::is_sampler_type(*Arg.Ty)) {
+        ArgInfo.type = POCL_ARG_TYPE_SAMPLER;
+      }
+    }
+#else
     for (llvm::Function::const_arg_iterator ii = KernelFunction->arg_begin(),
                                             ee = KernelFunction->arg_end();
          ii != ee; ii++) {
@@ -566,6 +582,7 @@ int pocl_llvm_get_kernels_metadata(cl_program program, unsigned device_i) {
       }
       i++;
     }
+#endif
 
     std::stringstream attrstr;
     std::string vectypehint;

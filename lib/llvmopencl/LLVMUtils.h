@@ -135,4 +135,20 @@ void CloneFunctionIntoAbs(llvm::Function *NewFunc,
 #endif
 }
 
+#define for_function_args(F)                                            \
+    for ( struct {                                                      \
+            llvm::Function::arg_iterator Itr;                           \
+            unsigned Index;                                             \
+            llvm::Argument *Arg;                                        \
+            llvm::Type *Ty;                                             \
+            llvm::Type *ValTy;                                          \
+    } Arg = { F->arg_begin(), 0 };                                      \
+          (Arg.Itr != F->arg_end() &&                                  \
+           (((Arg.Arg = Arg.Itr) &&                                     \
+             (Arg.Ty = Arg.Itr->getType()) &&                           \
+             (Arg.ValTy = Arg.Itr->getType()->isPointerTy() ? Arg.Itr->getType()->getPointerElementType() : nullptr)) || \
+            1));                                                        \
+          Arg.Itr++, Arg.Index++)
+
+
 #endif

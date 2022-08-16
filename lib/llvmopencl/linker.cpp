@@ -80,6 +80,20 @@ find_from_list(llvm::StringRef             needle,
  * Note this does not change the types in Function->FunctionType
  * so it's only used inside CopyFunc on kernel library functions */
 static void fixOpenCLimageArguments(llvm::Function *Func, unsigned AS) {
+#if 1
+    for_function_args(Func) {
+        Argument *j = &*Arg.Itr;
+        Type *t = j->getType();
+        if (t->isPointerTy() && t->getPointerElementType()->isStructTy()) {
+            Type *pe_type = t->getPointerElementType();
+            if (pe_type->getStructName().startswith("opencl.image"))  {
+              Type *new_t =
+                PointerType::get(pe_type, AS);
+              j->mutateType(new_t);
+            }
+        }
+    }
+#else
     Function::arg_iterator b = Func->arg_begin();
     Function::arg_iterator e = Func->arg_end();
     for (; b != e; b++)  {
@@ -94,6 +108,7 @@ static void fixOpenCLimageArguments(llvm::Function *Func, unsigned AS) {
             }
         }
     }
+#endif
 }
 
 /* Fixes opencl.imageX_t type arguments which miss address space global
@@ -109,6 +124,24 @@ CloneFuncFixOpenCLImageT(llvm::Module *Mod, llvm::Function *F, unsigned AS)
     int changed = 0;
     ValueToValueMapTy VVMap;
     SmallVector<Type *, 8> sv;
+#if 1
+    for_function_args (F) {
+        Argument *j = &*Arg.Itr;
+        Type *t = j->getType();
+        Type *new_t = t;
+        if (t->isPointerTy() && t->getPointerElementType()->isStructTy()) {
+          Type *pe_type = t->getPointerElementType();
+          if (pe_type->getStructName().startswith("opencl.image")) {
+
+            if (t->getPointerAddressSpace() != AS) {
+              new_t = PointerType::get(pe_type, AS);
+              changed = 1;
+            }
+          }
+        }
+        sv.push_back(new_t);
+    }
+#else
     for (Function::arg_iterator i = F->arg_begin(), e = F->arg_end();
           i != e; ++i) {
         Argument *j = &*i;
@@ -126,6 +159,7 @@ CloneFuncFixOpenCLImageT(llvm::Module *Mod, llvm::Function *F, unsigned AS)
         }
         sv.push_back(new_t);
     }
+#endif
 
     if (!changed)
       return F;
@@ -140,6 +174,13 @@ CloneFuncFixOpenCLImageT(llvm::Module *Mod, llvm::Function *F, unsigned AS)
     DstFunc->takeName(F);
 
     Function::arg_iterator j = DstFunc->arg_begin();
+#if 1
+    for_function_args (F) {
+        j->setName(Arg.Itr->getName());
+        VVMap[&*Arg.Itr] = &*j;
+        ++j;
+    }
+#else
     for (Function::const_arg_iterator i = F->arg_begin(),
          e = F->arg_end();
          i != e; ++i) {
@@ -147,6 +188,7 @@ CloneFuncFixOpenCLImageT(llvm::Module *Mod, llvm::Function *F, unsigned AS)
         VVMap[&*i] = &*j;
         ++j;
     }
+#endif
 
     DstFunc->copyAttributesFrom(F);
 
@@ -235,6 +277,13 @@ CopyFunc(const llvm::StringRef Name,
     VVMap[SrcFunc] = DstFunc;
 
     Function::arg_iterator j = DstFunc->arg_begin();
+#if 1
+    for_function_args (SrcFunc) {
+        j->setName(Arg.Itr->getName());
+        VVMap[&*Arg.Itr] = &*j;
+        ++j;
+    }
+#else
     for (Function::const_arg_iterator i = SrcFunc->arg_begin(),
          e = SrcFunc->arg_end();
          i != e; ++i) {
@@ -242,6 +291,7 @@ CopyFunc(const llvm::StringRef Name,
         VVMap[&*i] = &*j;
         ++j;
     }
+#endif
     if (!SrcFunc->isDeclaration()) {
         SmallVector<ReturnInst*, 8> RI;          // Ignore returns cloned.
         DB_PRINT("  cloning %s\n", Name.data());
